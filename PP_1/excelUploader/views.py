@@ -1,12 +1,14 @@
+import os
+
 import pytz
 from django.shortcuts import render
 from .models import ACS, Employee
-import datetime as dt
 import pandas as pd
-import os
-from django.conf import settings
 from django.views.generic.edit import FormView
 from .forms import FileFieldForm
+from django.core.files.storage import default_storage
+from django.core.files.storage import FileSystemStorage
+from .models import UploadExcel
 
 
 class FileFieldFormView(FormView):
@@ -23,43 +25,52 @@ class FileFieldFormView(FormView):
                 empexceldata = pd.read_excel(f,
                                              usecols=['Сотрудник', 'Фирма', 'Дата и Время', 'Направление', 'Дверь'],
                                              skiprows=3)
-                print(type(empexceldata))
                 dbframe = empexceldata
                 dbframe = dbframe.sort_values(by=['Дата и Время'])
-                list1 = []
-
-                list2 = []
+                list_of_employee = []
+                list_of_ids = []
                 for dbframe_employee in dbframe.itertuples():
-                    if not Employee.objects.filter(employee_name=dbframe_employee[1]).exists():
-                        obj = Employee.objects.create(employee_name=dbframe_employee[1])
-                        obj_id = obj.id
-                        # print(obj_id)
-                        obj.save()
+                    obj, created = Employee.objects.get_or_create(employee_name=dbframe_employee[1])
+                    obj_id = obj.id
+                    obj.save()
 
-                        wow = str(Employee.objects.get(pk=obj_id))
+                    employees = str(Employee.objects.get(pk=obj_id))
 
-                        list1.append(wow)
-                        list2.append(obj_id)
+                    list_of_employee.append(employees)
+                    list_of_ids.append(obj_id)
 
-                    else:
-                        wow = str(Employee.objects.get(pk=obj_id))
-                        list1.append(wow)
-                        pass
-
-                kek = zip(list1, list2)
-                d = dict(kek)
+                zip_emp = zip(list_of_employee, list_of_ids)
+                dict_emp = dict(zip_emp)
 
                 for dbframe_acs in dbframe.itertuples():
                     local_timezone = pytz.timezone('Etc/Gmt-6')
                     date_zero = local_timezone.localize(dbframe_acs[3]) - local_timezone.utcoffset(
                         dbframe_acs[3])
 
-                    if d.get(dbframe_acs[1]) != None:
-                        obj = ACS.objects.create(employee_id=d.get(dbframe_acs[1]), company=dbframe_acs[2],
-                                                 datetime=date_zero,
-                                                 direction=dbframe_acs[4], door=dbframe_acs[5])
+                    if dict_emp.get(dbframe_acs[1]) != None:
+                        obj, created = ACS.objects.get_or_create(employee_id=dict_emp.get(dbframe_acs[1]),
+                                                                 company=dbframe_acs[2],
+                                                                 datetime=date_zero,
+                                                                 direction=dbframe_acs[4], door=dbframe_acs[5])
 
                         obj.save()
+               
+
+                read_file = pd.read_excel(f, usecols='A', nrows=1)
+                name = read_file
+                print(str(read_file))
+
+                document = default_storage.save(f.name, f)
+                dir_path = os.getcwd()
+                kek = 'wow.xlsx'
+
+                path = '%s\media\%s' % (str(dir_path), str(f))
+                path2 = '%s\media\%s.xlsx' % (str(dir_path), name)
+                print(f)
+                print(path)
+
+                # os.rename(path, path2)
+
 
             return self.form_valid(form)
         else:
