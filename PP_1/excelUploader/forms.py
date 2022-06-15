@@ -13,5 +13,3 @@ class FileFieldForm(forms.ModelForm):
         widgets = {
             'file_field': ClearableFileInput(attrs={'multiple': True}),
         }
-    # file_field = forms.FileField(widget=forms.ClearableFileInput(attrs={
-    #     'multiple': True}))
