@@ -1,5 +1,4 @@
 import os
-
 import pytz
 from django.shortcuts import render
 from .models import ACS, Employee
@@ -7,8 +6,6 @@ import pandas as pd
 from django.views.generic.edit import FormView
 from .forms import FileFieldForm
 from django.core.files.storage import default_storage
-from django.core.files.storage import FileSystemStorage
-from .models import UploadExcel
 
 
 class FileFieldFormView(FormView):
@@ -54,23 +51,25 @@ class FileFieldFormView(FormView):
                                                                  direction=dbframe_acs[4], door=dbframe_acs[5])
 
                         obj.save()
-               
 
-                read_file = pd.read_excel(f, usecols='A', nrows=1)
-                name = read_file
-                print(str(read_file))
 
-                document = default_storage.save(f.name, f)
+                read_file = pd.read_excel(f)
+                report_date = str(read_file.iloc[0])
+                name_split = report_date.split("   ", 1)
+                name_replace = name_split[0].replace(":", "")
                 dir_path = os.getcwd()
-                kek = 'wow.xlsx'
+                check_name = "%s.xlsx" % (name_replace)
+                old_name = '%s\media' % (str(dir_path))
+                for i in os.walk(old_name):
+                    if check_name in i[2]:
+                        print("Duplicate")
+                    else:
+                        document = default_storage.save(f.name, f)
+                        dir_path = os.getcwd()
+                        old_name = '%s\media\%s' % (str(dir_path), str(f))
+                        new_name = '%s\media\%s.xlsx' % (str(dir_path), name_replace)
 
-                path = '%s\media\%s' % (str(dir_path), str(f))
-                path2 = '%s\media\%s.xlsx' % (str(dir_path), name)
-                print(f)
-                print(path)
-
-                # os.rename(path, path2)
-
+                        os.rename(old_name, new_name)
 
             return self.form_valid(form)
         else:
