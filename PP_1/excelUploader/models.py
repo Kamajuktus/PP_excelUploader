@@ -20,4 +20,5 @@ class ACS(models.Model):
     objects = models.Manager()
 
 class UploadExcel(models.Model):
-    file_field = models.FileField(upload_to='media/', blank=True, null=True)
+    file_field = models.FileField(upload_to='media/', blank=True, null=True,
+                                  validators=[FileExtensionValidator(['xlsx'])])
